@@ -102,6 +102,7 @@ A `gpt-4` model is also available as the fast/small fallback (`ANTHROPIC_SMALL_F
 
 - **First run authentication**: `run start` will prompt for GitHub device auth — complete it in the browser.
 - **Connection errors**: Run `run test` to verify the proxy is reachable, and `run claude-status` to check settings.
+- **SSL certificate trust errors**: If you have `SSL_CERT_FILE` or `REQUESTS_CA_BUNDLE` set in your shell, LiteLLM will now merge that bundle with the venv `certifi` bundle. If you are behind a corporate proxy such as Zscaler, make sure your local CA bundle includes the proxy root cert.
 - **Unsupported parameter errors**: Already handled — `drop_params: true` is set in `copilot-config.yaml`.
 - **Wrong model name**: Run `run list-models-enabled` to see valid model IDs, then update `copilot-config.yaml`.
 - **Reset everything**: `run claude-disable` → `run claude-enable`.
