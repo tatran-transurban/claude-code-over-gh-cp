@@ -79,9 +79,11 @@ The proxy exposes these Anthropic models (configured in `copilot-config.yaml`):
 
 | Model name | GitHub Copilot model | Context |
 |---|---|---|
+| `claude-opus-4-8` *(default)* | `github_copilot/claude-opus-4.8` | 200k |
+| `claude-haiku-4-6` | `github_copilot/claude-haiku-4.6` | 200k |
 | `claude-opus-4-6` | `github_copilot/claude-opus-4.6` | 200k |
 | `claude-sonnet-4-6` | `github_copilot/claude-sonnet-4.6` | 200k |
-| `claude-sonnet-4-5` *(default)* | `github_copilot/claude-sonnet-4.5` | 200k |
+| `claude-sonnet-4-5` | `github_copilot/claude-sonnet-4.5` | 200k |
 | `claude-haiku-4-5` | `github_copilot/claude-haiku-4.5` | 200k |
 
 To switch the default model, edit `ANTHROPIC_MODEL` in `~/.claude/settings.json`, or update `scripts/claude_enable.py` and re-run `run claude-enable`.
