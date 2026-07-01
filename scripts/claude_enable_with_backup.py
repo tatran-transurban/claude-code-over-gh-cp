@@ -15,13 +15,25 @@ def read_master_key(env_path: Path) -> str:
     if not env_path.exists():
         raise FileNotFoundError(".env file not found. Run 'run setup' first.")
 
+    master_key = None
+    claude_key = None
     for raw_line in env_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
-        if line.startswith("LITELLM_MASTER_KEY="):
-            return line.split("=", 1)[1].strip().strip('"')
+        if line.startswith("LITELLM_CLAUDE_KEY="):
+            val = line.split("=", 1)[1].strip().strip('"')
+            if val:
+                claude_key = val
+        elif line.startswith("LITELLM_MASTER_KEY="):
+            master_key = line.split("=", 1)[1].strip().strip('"')
 
+    # Prefer the budget-tracked virtual key so spend shows in the admin UI.
+    # Fall back to master key if the virtual key hasn't been generated yet.
+    if claude_key:
+        return claude_key
+    if master_key:
+        return master_key
     raise ValueError("LITELLM_MASTER_KEY not found in .env")
 
 

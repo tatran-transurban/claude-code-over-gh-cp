@@ -49,7 +49,10 @@ run install-claude
 ```
 run setup
 ```
-Creates a Python virtual environment, installs dependencies, and generates API keys in `.env`.
+Creates a Python virtual environment, installs dependencies, generates API keys in `.env`, and **automatically sets up cost tracking**:
+- **Windows**: downloads portable PostgreSQL (~350 MB, no admin required) into `postgres/`
+- **macOS**: starts your Homebrew PostgreSQL if available
+- **No PostgreSQL found**: setup completes without cost tracking — run `run cost-tracking-init` later
 
 ### 3. Configure Claude Code
 ```
@@ -99,6 +102,12 @@ A `gpt-4` model is also available as the fast/small fallback (`ANTHROPIC_SMALL_F
 | `run stop` | Stop the LiteLLM proxy |
 | `run list-models` | List all available GitHub Copilot models |
 | `run list-models-enabled` | List only enabled models |
+| `run cost-tracking-init` | Set up cost tracking — auto-detects or installs PostgreSQL |
+| `run cost-tracking-init --postgres-url URL` | Set up cost tracking with a specific PostgreSQL URL |
+| `run postgres-init` | Explicitly set up local PostgreSQL (Windows: portable install; macOS: system/Homebrew) |
+| `run postgres-start` | Start the local portable PostgreSQL |
+| `run postgres-stop` | Stop the local portable PostgreSQL |
+| `run prisma-init` | Re-run Prisma generate + DB migration |
 
 ## Optional: Spend Tracking & Access Control
 
@@ -110,32 +119,29 @@ LiteLLM provides an Admin UI for managing virtual keys, tracking spend, setting 
 
 ### Prerequisites for Cost Tracking
 
-LiteLLM requires a database to store usage data and track spending:
+LiteLLM requires a PostgreSQL database. The setup command handles it automatically:
 
-1. **PostgreSQL** - Install and start:
-   ```bash
-   # macOS
-   brew install postgresql@18
-   brew services start postgresql@18
-   
-   # Ubuntu/Debian
-   sudo apt install postgresql postgresql-contrib
-   sudo systemctl start postgresql
-   
-   # Windows - download from https://www.postgresql.org/download/windows/
-   ```
+```
+run cost-tracking-init
+```
 
-2. **Prisma** - Already included in `requirements.txt`, installed during `run setup`
+| Platform | What happens |
+|----------|-------------|
+| **Windows** | Downloads portable PostgreSQL binaries (~350 MB, no admin required) into `postgres/`, initializes on port 5433, and runs the Prisma migration. |
+| **macOS** | Uses a running Homebrew PostgreSQL if found; starts it automatically if a formula is installed. |
+| **Linux / other** | Checks for a running local PostgreSQL. If none found, prints install instructions. |
 
-3. **Configure database** - Add to `.env`:
-   ```
-   DATABASE_URL="postgresql://user:password@localhost:5432/litellm"
-   ```
+Once set up, `run start` auto-starts the local PostgreSQL on every launch.
 
-4. **Initialize database**:
-   ```bash
-   run prisma-init
-   ```
+To use a specific existing database instead:
+```
+run cost-tracking-init --postgres-url postgresql://user:password@host:5432/litellm
+```
+
+To re-run the Prisma migration separately (e.g. after a LiteLLM upgrade):
+```
+run prisma-init
+```
 
 ### Enable the Admin UI
 
@@ -160,6 +166,11 @@ LiteLLM requires a database to store usage data and track spending:
 
 - **First run authentication**: `run start` will prompt for GitHub device auth — complete it in the browser.
 - **Connection errors**: Run `run test` to verify the proxy is reachable, and `run claude-status` to check settings.
+- **SSL certificate errors during `run cost-tracking-init`**: Prisma CLI is a Node.js binary. On Windows, this tool automatically exports the Windows trusted root store (including corporate CA certs from IT policy) and passes it to Node.js via `NODE_EXTRA_CA_CERTS`. If you still see SSL errors, set `NODE_EXTRA_CA_CERTS` manually:
+  ```powershell
+  $env:NODE_EXTRA_CA_CERTS = "C:\path\to\ca-bundle.pem"
+  .\run cost-tracking-init --postgres-url URL
+  ```
 - **SSL certificate trust errors**: LiteLLM may fail when connecting to `api.individual.githubcopilot.com` if your machine is behind a corporate TLS proxy or firewall that intercepts HTTPS traffic (for example, Zscaler). In that case the proxy presents its own intermediate/root certificate, and Python/OpenSSL must trust that certificate chain.
   - The proxy now preserves and merges any existing `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` bundle with the venv `certifi` bundle, but you still need the proxy root cert in the trusted bundle.
   - On macOS, export the trusted bundle from the system keychain and use it when starting LiteLLM:
@@ -176,3 +187,4 @@ LiteLLM requires a database to store usage data and track spending:
 - **macOS permission denied on `./run`**: Run `chmod +x run` to make the script executable.
 - **macOS `python` not found**: Use `python3` instead, or run `./run` which already uses `python3`.
 - **PowerShell `run` not recognized**: Use `.\run <command>` — PowerShell requires the explicit `./` prefix for local scripts.
+- **Cost tracking DB errors on Windows (`All connection attempts failed`)**: LiteLLM's DB health watchdog uses `os.kill(pid, 0)` to check whether the Prisma query-engine process is alive. On Windows, signal 0 equals `CTRL_C_EVENT`, so this call actually **terminates** the engine instead of probing it. `run setup` and `run start` automatically patch the affected function in the installed litellm package with a safe Windows API call (`OpenProcess`). If you see these errors after upgrading litellm, run `run setup` again to re-apply the patch.
