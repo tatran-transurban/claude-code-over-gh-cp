@@ -98,10 +98,76 @@ A `gpt-4` model is also available as the fast/small fallback (`ANTHROPIC_SMALL_F
 | `run list-models` | List all available GitHub Copilot models |
 | `run list-models-enabled` | List only enabled models |
 
+## Optional: Spend Tracking & Access Control
+
+LiteLLM provides an Admin UI for managing virtual keys, tracking spend, setting budgets, and controlling model access. This is useful for:
+
+- **Tracking costs** per user or team
+- **Setting spending limits** (daily/monthly budgets)
+- **Restricting model access** (e.g., limit expensive models)
+
+### Prerequisites for Cost Tracking
+
+LiteLLM requires a database to store usage data and track spending:
+
+1. **PostgreSQL** - Install and start:
+   ```bash
+   # macOS
+   brew install postgresql@18
+   brew services start postgresql@18
+   
+   # Ubuntu/Debian
+   sudo apt install postgresql postgresql-contrib
+   sudo systemctl start postgresql
+   
+   # Windows - download from https://www.postgresql.org/download/windows/
+   ```
+
+2. **Prisma** - Already included in `requirements.txt`, installed during `run setup`
+
+3. **Configure database** - Add to `.env`:
+   ```
+   DATABASE_URL="postgresql://user:password@localhost:5432/litellm"
+   ```
+
+4. **Initialize database**:
+   ```bash
+   run prisma-init
+   ```
+
+### Enable the Admin UI
+
+1. **Get virtual key** with admin permissions:
+  Get `LITELLM_MASTER_KEY` in `.env`
+
+2. **Access the Admin UI** at `http://localhost:4444/ui`:
+   - Login with the generated key
+   - View usage metrics and costs
+   - Set budget
+
+### Key Management Workflow
+
+1. **Create virtual keys** for user via the UI
+2. **Set budgets** (e.g., $100/month per user)
+3. **Restrict models** (e.g., only allow Claude Haiku for testing)
+4. **Update Claude settings** to use the virtual key instead of master key
+
+**Full documentation:** [LiteLLM Docker Quick Start - Virtual Keys](https://docs.litellm.ai/docs/proxy/docker_quick_start#optional-generate-a-virtual-key)
+
 ## Troubleshooting
 
 - **First run authentication**: `run start` will prompt for GitHub device auth — complete it in the browser.
 - **Connection errors**: Run `run test` to verify the proxy is reachable, and `run claude-status` to check settings.
+- **SSL certificate trust errors**: LiteLLM may fail when connecting to `api.individual.githubcopilot.com` if your machine is behind a corporate TLS proxy or firewall that intercepts HTTPS traffic (for example, Zscaler). In that case the proxy presents its own intermediate/root certificate, and Python/OpenSSL must trust that certificate chain.
+  - The proxy now preserves and merges any existing `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` bundle with the venv `certifi` bundle, but you still need the proxy root cert in the trusted bundle.
+  - On macOS, export the trusted bundle from the system keychain and use it when starting LiteLLM:
+    ```bash
+    security find-certificate -a -c 'Zscaler' -p > /tmp/zscaler_keychain_certs.pem
+    export SSL_CERT_FILE=/tmp/zscaler_keychain_certs.pem
+    export REQUESTS_CA_BUNDLE=$SSL_CERT_FILE
+    ./run start
+    ```
+  - If `run test` still fails with `[SSL: CERTIFICATE_VERIFY_FAILED] unable to get local issuer certificate`, the current CA bundle does not include the intercepting proxy root. Add that root cert to your trusted bundle or use the exported keychain PEM above.
 - **Unsupported parameter errors**: Already handled — `drop_params: true` is set in `copilot-config.yaml`.
 - **Wrong model name**: Run `run list-models-enabled` to see valid model IDs, then update `copilot-config.yaml`.
 - **Reset everything**: `run claude-disable` → `run claude-enable`.
