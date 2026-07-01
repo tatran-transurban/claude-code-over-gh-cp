@@ -46,6 +46,14 @@ model_list:
     litellm_params:
       model: github_copilot/gpt-4.1
       extra_headers: {"Editor-Version": "vscode/1.121.0", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: claude-opus-4-8
+    litellm_params:
+      model: github_copilot/claude-opus-4.8
+      extra_headers: {"Editor-Version": "vscode/1.121.0", "Copilot-Integration-Id": "vscode-chat"}
+  - model_name: claude-haiku-4-6
+    litellm_params:
+      model: github_copilot/claude-haiku-4.6
+      extra_headers: {"Editor-Version": "vscode/1.121.0", "Copilot-Integration-Id": "vscode-chat"}
   - model_name: claude-opus-4-6
     litellm_params:
       model: github_copilot/claude-opus-4.6
