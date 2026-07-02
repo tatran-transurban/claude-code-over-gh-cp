@@ -29,6 +29,9 @@ proxy_server_config.yaml
 router_config.yaml
 .litellm/
 
+# Local portable PostgreSQL (downloaded by: run postgres-init)
+postgres/
+
 # Logs
 *.log
 logs/
